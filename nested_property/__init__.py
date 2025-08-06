@@ -1,5 +1,46 @@
 # nested_property.py
 
+def _match(document, query):
+    if not isinstance(query, dict):
+        return False
+
+    for key, value in query.items():
+        if key == "$and":
+            if not all(_match(document, subquery) for subquery in value):
+                return False
+        elif key == "$or":
+            if not any(_match(document, subquery) for subquery in value):
+                return False
+        elif key == "$not":
+            if _match(document, value):
+                return False
+        elif isinstance(value, dict):
+            doc_value = get(document, key)
+            for op, v in value.items():
+                if op == "$eq" and not doc_value == v:
+                    return False
+                elif op == "$ne" and not doc_value != v:
+                    return False
+                elif op == "$gt" and not (doc_value is not None and doc_value > v):
+                    return False
+                elif op == "$gte" and not (doc_value is not None and doc_value >= v):
+                    return False
+                elif op == "$lt" and not (doc_value is not None and doc_value < v):
+                    return False
+                elif op == "$lte" and not (doc_value is not None and doc_value <= v):
+                    return False
+                elif op == "$in" and not doc_value in v:
+                    return False
+                elif op == "$nin" and doc_value in v:
+                    return False
+                else:
+                    if op not in ["$eq","$ne","$gt","$gte","$lt","$lte","$in","$nin"]:
+                        raise ValueError(f"Unsupported operator: {op}")
+        else:
+            if get(document, key) != value:
+                return False
+    return True
+
 def _parse_key(key, index_prefix):
     """Determine if the key is a list index or dict key.
     Supports multi-character index prefixes.
@@ -116,10 +157,20 @@ def pull(obj, path, value=None, index=None, index_prefix=None):
     if target_list is None:
         return
 
-    if index is not None and 0 <= index < len(target_list):
+    if index is not None and isinstance(index, int) and 0 <= index < len(target_list):
         target_list.pop(index)
     elif value is not None:
-        parent[last_key if not last_is_index else last_key] = [v for v in target_list if v != value]
+        if isinstance(value, dict):
+            q_indexes = []
+            for idx, doc in enumerate(target_list):
+                if not isinstance(doc, dict):
+                    continue
+                if _match(doc, value):
+                    q_indexes.append(idx)
+            for idx in q_indexes[::-1]:
+                target_list.pop(idx)
+        else:
+            parent[last_key if not last_is_index else last_key] = [v for v in target_list if v != value]
 
 def has(obj, path, index_prefix=None):
     keys = path.split(".")
