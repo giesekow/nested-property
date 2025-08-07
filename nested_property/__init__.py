@@ -33,6 +33,13 @@ def _match(document, query):
                     return False
                 elif op == "$nin" and doc_value in v:
                     return False
+                elif op == "$len":
+                    _len = len(doc_value)
+                    if isinstance(v, dict):
+                        if not _match({"$len": _len}, v):
+                            return False
+                    elif not _len == v:
+                        return False
                 else:
                     if op not in ["$eq","$ne","$gt","$gte","$lt","$lte","$in","$nin"]:
                         raise ValueError(f"Unsupported operator: {op}")
@@ -81,12 +88,30 @@ def _traverse(obj, keys, create_missing=False, index_prefix=None):
             return None
     return obj
 
-def get(obj, path, default=None, index_prefix=None):
+def get(obj, path, default=None, index_prefix=None, query=None):
+    
+    if isinstance(path, (list, tuple)):
+        res = []
+        for p in path:
+            res.append(get(obj=obj, path=p, default=default, index_prefix=index_prefix, query=query))
+            
+        return res
+    
     keys = path.split(".")
     result = _traverse(obj, keys, index_prefix=index_prefix)
+
+    if (not result is None) and (not query is None):
+        if isinstance(result, (list, tuple)):
+            result = list(( item for item in result if isinstance(item, dict) and _match(item, query)))
+
     return default if result is None else result
 
 def set(obj, path, value, index_prefix=None):
+    if isinstance(path, (list, tuple)):
+        for p in path:
+            set(obj=obj, path=p, value=value, index_prefix=index_prefix)
+        return
+    
     keys = path.split(".")
     current = obj
     for key in keys[:-1]:
@@ -121,6 +146,12 @@ def set(obj, path, value, index_prefix=None):
         current[last_key] = value
 
 def delete(obj, path, index_prefix=None):
+
+    if isinstance(path, (list, tuple)):
+        for p in path:
+            delete(obj=obj, path=p, index_prefix=index_prefix)
+        return
+
     keys = path.split(".")
     parent = _traverse(obj, keys[:-1], index_prefix=index_prefix)
     if parent is None:
@@ -135,6 +166,12 @@ def unset(obj, path, index_prefix=None):
     delete(obj, path, index_prefix)
 
 def push(obj, path, value, index_prefix=None):
+    
+    if isinstance(path, (list, tuple)):
+        for p in path:
+            push(obj=obj, path=p, value=value, index_prefix=index_prefix)
+        return
+    
     target = _traverse(obj, path.split("."), create_missing=True, index_prefix=index_prefix)
     if isinstance(target, list):
         target.append(value)
@@ -142,6 +179,12 @@ def push(obj, path, value, index_prefix=None):
         set(obj, path, [value], index_prefix=index_prefix)
 
 def pull(obj, path, value=None, index=None, index_prefix=None):
+    
+    if isinstance(path, (list, tuple)):
+        for p in path:
+            pull(obj=obj, path=p, value=value, index=index, index_prefix=index_prefix)
+        return
+    
     keys = path.split(".")
     parent = _traverse(obj, keys[:-1], index_prefix=index_prefix)
     if parent is None:
@@ -173,6 +216,14 @@ def pull(obj, path, value=None, index=None, index_prefix=None):
             parent[last_key if not last_is_index else last_key] = [v for v in target_list if v != value]
 
 def has(obj, path, index_prefix=None):
+    
+    if isinstance(path, (list, tuple)):
+        res = []
+        for p in path:
+            res.append(has(obj=obj, path=p, index_prefix=index_prefix))
+
+        return res
+    
     keys = path.split(".")
     current = obj
     for key in keys:
