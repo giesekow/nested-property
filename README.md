@@ -98,13 +98,13 @@ print(get(data, "a.0.b"))  # [1, 2, 3, 4]
 
 | Function | Description | Parameters |
 |----------|-------------|------------|
-| `get(obj, path, default=None, index_prefix=None)` | Get nested value | `obj`: dict/list, `path`: str, `default`: any, `index_prefix`: str or None |
-| `set(obj, path, value, index_prefix=None)` | Set nested value | `obj`: dict/list, `path`: str, `value`: any, `index_prefix`: str or None |
-| `delete(obj, path, index_prefix=None)` | Delete nested value | `obj`: dict/list, `path`: str, `index_prefix`: str or None |
-| `unset(obj, path, index_prefix=None)` | Alias for Delete | `obj`: dict/list, `path`: str, `index_prefix`: str or None |
-| `has(obj, path, index_prefix=None)` | Check if nested value exists | `obj`: dict/list, `path`: str, `index_prefix`: str or None |
-| `push(obj, path, value, index_prefix=None)` | Append value to nested list | `obj`: dict/list, `path`: str, `value`: any, `index_prefix`: str or None |
-| `pull(obj, path, value=None, index=None, index_prefix=None)` | Remove value from nested list by value or index | `obj`: dict/list, `path`: str, `value`: any, `index`: int, `index_prefix`: str or None |
+| `get(obj, path, default=None, index_prefix=None, query=None)` | Get nested value | `obj`: dict/list, `path`: str/list[str], `default`: any, `index_prefix`: str or None, `query`: dict or None |
+| `set(obj, path, value, index_prefix=None)` | Set nested value | `obj`: dict/list, `path`: str/list[str], `value`: any, `index_prefix`: str or None |
+| `delete(obj, path, index_prefix=None)` | Delete nested value | `obj`: dict/list, `path`: str/list[str], `index_prefix`: str or None |
+| `unset(obj, path, index_prefix=None)` | Alias for Delete | `obj`: dict/list, `path`: str/list[str], `index_prefix`: str or None |
+| `has(obj, path, index_prefix=None)` | Check if nested value exists | `obj`: dict/list, `path`: str/list[str], `index_prefix`: str or None |
+| `push(obj, path, value, index_prefix=None)` | Append value to nested list | `obj`: dict/list, `path`: str/list[str], `value`: any, `index_prefix`: str or None |
+| `pull(obj, path, value=None, index=None, index_prefix=None)` | Remove value from nested list by value or index | `obj`: dict/list, `path`: str[str], `value`: any, `index`: int, `index_prefix`: str or None |
 
 
 ## Notes
@@ -113,6 +113,10 @@ Dot-separated paths are used for nested keys, e.g., `"a.b.c"` or `"x.y.0.z"`.
 Index prefixes allow you to distinguish numeric dictionary keys from list indices.
 
 When `index_prefix=None` (default), any key that is a valid integer string is treated as a list index automatically.
+
+Where `path` is a list the functions return a list or where its an editing functions (e.g. `set`, `pull`, `push`) the effect is applied to the paths one after the other.
+
+When using the `pull` function, when `value` is a `dict` it is used as a query.
 
 ## License
 MIT License
