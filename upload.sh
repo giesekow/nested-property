@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 -m twine upload dist/*
+./venv/bin/python -m twine upload dist/*
