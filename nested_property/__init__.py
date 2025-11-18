@@ -277,12 +277,13 @@ def has(obj, path, index_prefix=None):
 def match_condition(item: Dict[str, Any], key: str, condition: Any) -> bool:
     """
     Checks if a single key in the item matches the condition.
-    Supports $regex, $options, $lt, $lte, $gt, $gte, $in, $nin.
+    Supports $regex, $options, $lt, $lte, $gt, $gte, $in, $nin, $inc, $ninc.
     """
     value = get(item, key)
 
     if isinstance(condition, dict):
-        for op, op_val in condition.items():
+        for _op, op_val in condition.items():
+            op = str(_op).lower().strip()
             if op == '$regex':
                 flags = 0
                 if '$options' in condition:
@@ -308,6 +309,12 @@ def match_condition(item: Dict[str, Any], key: str, condition: Any) -> bool:
                     return False
             elif op == '$nin':
                 if value in op_val:
+                    return False
+            elif op == '$inc':
+                if op_val not in value:
+                    return False
+            elif op == '$ninc':
+                if op_val in value:
                     return False
             elif op == '$options':
                 continue  # already handled in $regex
