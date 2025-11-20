@@ -307,6 +307,12 @@ def match_condition(item: Dict[str, Any], key: str, condition: Any) -> bool:
             elif op == '$gte':
                 if not (value >= op_val):
                     return False
+            elif op == '$eq':
+                if not (value == op_val):
+                    return False
+            elif op == '$ne':
+                if value == op_val:
+                    return False
             elif op == '$in':
                 if value not in op_val:
                     return False
@@ -321,6 +327,52 @@ def match_condition(item: Dict[str, Any], key: str, condition: Any) -> bool:
                     return False
             elif op == '$options':
                 continue  # already handled in $regex
+            elif op == '$any':
+                if not is_list_object(value):
+                    return False
+                if isinstance(op_val, dict):
+                    return any(match_item(itm, op_val) for itm in value)
+                else:
+                    return any(itm == op_val for itm in value)
+                    
+            elif op == '$all':
+                if not is_list_object(value):
+                    return False
+                if isinstance(op_val, dict):
+                    return all(match_item(itm, op_val) for itm in value)
+                else:
+                    return all(itm == op_val for itm in value)
+
+            elif op == '$size':
+                if hasattr(value, '__len__'):
+                    size = len(value)
+                    return match_item({"size": size}, {"size": op_val})
+                else:
+                    return False
+            elif op == '$exists':
+                if op_val:
+                    return not value is None
+                else:
+                    return value is None
+            elif op == '$where':
+                if callable(op_val):
+                    return bool(op_val(value))
+                return False
+            elif op == '$not':
+                if isinstance(op_val, dict):
+                    return not match_item(value, op_val)
+                return False
+            elif op == '$type':
+                return type(value) == op_val
+            elif op == '$instanceof':
+                return isinstance(value, op_val)
+            elif op == '$elemmatch':
+                if is_list_object(value):
+                    return any(match_item(v, op_val) for v in value)
+                elif is_dict_object(value):
+                    return match_item(value, op_val)
+                else:
+                    return match_item({key: value}, {key: op_val})
             else:
                 # Treat as exact match for unknown operator
                 if value != condition:
@@ -337,6 +389,8 @@ def match_item(item: Dict[str, Any], query: Dict[str, Any]) -> bool:
         return all(match_item(item, sub_query) for sub_query in query['$and'])
     if '$or' in query:
         return any(match_item(item, sub_query) for sub_query in query['$or'])
+    if '$nor' in query:
+        return not any(match_item(item, sub_query) for sub_query in query['$nor'])
 
     return all(match_condition(item, k, v) for k, v in query.items())
 
