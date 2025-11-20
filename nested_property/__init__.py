@@ -7,13 +7,16 @@ def get_value(obj, key, default=None):
     """Retrieve value from dict or object attribute."""
     if isinstance(obj, dict):
         return obj.get(key, default)
+    if isinstance(obj, list):
+        if len(obj) > key:
+            return obj[key]
     if hasattr(obj, key):
         return getattr(obj, key)
     return default
 
 def set_value(obj, key, value):
     """Set value on dict or object attribute."""
-    if isinstance(obj, dict):
+    if isinstance(obj, (dict, list, tuple)):
         obj[key] = value
     else:
         setattr(obj, key, value)
